@@ -22,6 +22,12 @@
  ; empty JIRA project.
  :issue-offset 0
 
+ ; Default issue type (e.g. Task, Story, etc.)
+ :default-issue-type "Task"
+
+ ; Whether or not to import pull requests
+ :import-pull-requests false
+
  ; Git base URL - used to translate GHI "referenced" events to
  ; comments with a URL pointing to the link.
  :git-base-url "https://bitbucket.org/somenamehere/someprojectthere/changeset/"
