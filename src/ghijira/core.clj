@@ -29,6 +29,8 @@
 (def ^:dynamic *jira-project*)
 (def ^:dynamic *git-base-url*)
 (def ^:dynamic *issue-offset*)
+(def ^:dynamic *default-issue-type*)
+(def ^:dynamic *import-pull-requests*)
 
 ; Use the all-pages mechanism in tentacles to retrieve a complete list
 ; of issues. I found that several of the GH export scripts on the web
@@ -141,6 +143,8 @@
     (or "")
     (str/replace #"#(\d+)\b"
                  #(str project "-" (+ issue-offset (bigdec (second %1)))))
+    (str/replace #"GH\-(\d+)\b"
+                 #(str project "-" (+ issue-offset (bigdec (second %1)))))
     (str/replace \#
                  \_ ))) ; Drop #, JIRA does not like.
 
@@ -172,9 +176,10 @@
          comment-text)))
 
 (defn format-title [issue]
-  (if (:pull_request issue)
-    (str "(PR #" (:number issue) ") " (:title issue))
-    (:title issue)))
+  (let [converted-title (cross-item-ref-replace (:title issue) *jira-project* *issue-offset*)]
+    (if (:pull_request issue)
+	  (str "(PR #" (:number issue) ") " converted-title)
+	  converted-title)))
 
 (defn get-labels
   [issue]
@@ -207,7 +212,7 @@
         (cross-item-ref-replace (:body issue) *jira-project* *issue-offset*)
         (gh2jira (:created_at issue))
         (gh2jira (:updated_at issue))
-        "Task" ; issue type
+        *default-issue-type*
         milestone-dashes
         (if (= "closed" (:state issue)) "Closed" "Open")
         (if (= "closed" (:state issue)) "Fixed" "Unresolved")
@@ -218,6 +223,11 @@
       (repeat (- *maxcmt* (count trimmed-comments)) "")    ; pad out field count
     )))
 
+(defn import-issue? [issue]
+  (if (:pull_request issue)
+    *import-pull-requests*
+    true))
+
 (defn export-issues-to-file [issues filename]
   (let [issues-in-order (sort-by :number issues)]
     (with-open [out-file (io/writer filename)]
@@ -225,7 +235,7 @@
         out-file
         (concat
           [(columns)]
-          (map issue2row issues-in-order))))))
+          (map issue2row (filter import-issue? issues-in-order)))))))
 
 ;; Main
 
@@ -251,6 +261,8 @@
             *ignore-mentions* (:ignore-mentions config)
             *jira-project* (:jira-project config)
             *issue-offset* (:issue-offset config)
+            *default-issue-type* (:default-issue-type config)
+            *import-pull-requests* (:import-pull-requests config)
             *git-base-url* (:git-base-url config)
             ]
     ; change to issues-with-extra-cached for faster development
