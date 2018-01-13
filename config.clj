@@ -26,7 +26,7 @@
  :default-issue-type "Task"
 
  ; Whether or not to import pull requests
- :import-pull-requests false
+ :import-pull-requests true
 
  ; Git base URL - used to translate GHI "referenced" events to
  ; comments with a URL pointing to the link.
